@@ -12,6 +12,7 @@ Handles only A type records.
 import codecs
 import sys
 import socket
+import time
 import bitstring, struct # For constructing and destructing the DNS packet.
 
 
@@ -232,8 +233,16 @@ if __name__ == "__main__":
       #   print("No host name specified.")
       #
       #   sys.exit(0)
+      #   result = resolve_host_name(HOST_NAME)
+      #
+      #   print("\nHost Name:\n" + str(result['host_name']))
+      #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
 
-  result = resolve_host_name(HOST_NAME)
+  while True :
 
-  print("\nHost Name:\n" + str(result['host_name']))
-  print("\nIP Address:\n" + str(result['ip_address']) + "\n")
+    result = resolve_host_name(HOST_NAME)
+
+    print("\nHost Name:\n" + str(result['host_name']))
+    print("\nIP Address:\n" + str(result['ip_address']) + "\n")
+
+    time.sleep(10)
