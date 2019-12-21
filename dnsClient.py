@@ -13,29 +13,68 @@ import codecs
 import sys
 import socket
 import time
-import bitstring, struct # For constructing and destructing the DNS packet.
+import bitstring , struct # For constructing and destructing the DNS packet.
+from scapy.all import *
 
 
 def to_hex_string(x):
   """
   Encodes either a positive integer or string to its hexadecimal representation.
   """
-
   result = "0"
-
   if x.__class__.__name__ == "int" and x >= 0:
-
     result = hex(x)
-
     if x < 16:
-
       result = "0" + result[2:]
-
   elif x.__class__.__name__ == "str":
-
     result = "".join([hex(ord(y))[2:] for y in x])
-
   return "0x" + result
+
+
+#This method sends a dns query with spoofed ip to our destination server
+#The query wonwt get response back
+def spoofed_dns_query(source_ip_addr , des_ip_addr ,des_port, query):
+  pct = IP(src=source_ip_addr, dst=des_ip_addr) / UDP( dport=des_port) / DNS(rd=1, qd=DNSQR(qname=query), id=random.randint(0,65536))
+  send(pct)
+
+def is_valid_ipv4_address(address):
+  try:
+    socket.inet_pton(socket.AF_INET, address)
+  except AttributeError:  # no inet_pton here, sorry
+    try:
+      socket.inet_aton(address)
+    except socket.error:
+      return False
+    return address.count('.') == 3
+  except socket.error:  # not a valid address
+    return False
+
+  return True
+
+#This method returns a list of local DNS servers IPs
+def get_windows_dns_ips():
+  output = subprocess.check_output(["ipconfig", "-all"])
+  output = str(output)
+  ipconfig_all_list = output.split('\\r\\n')
+
+  dns_ips = []
+  for i in range(0, len(ipconfig_all_list)):
+    if "DNS Servers" in ipconfig_all_list[i]:
+      # get the first dns server ip
+      first_ip = ipconfig_all_list[i].split(":")[1].strip()
+      if not is_valid_ipv4_address(first_ip):
+        continue
+      dns_ips.append(first_ip)
+      # get all other dns server ips if they exist
+      k = i + 1
+      while k < len(ipconfig_all_list) and ":" not in ipconfig_all_list[k]:
+        ip = ipconfig_all_list[k].strip()
+        if is_valid_ipv4_address(ip):
+          dns_ips.append(ip)
+        k += 1
+      # at this point we're done
+      break
+  return dns_ips
 
 
 def resolve_host_name(host_name_to):
@@ -76,6 +115,7 @@ def resolve_host_name(host_name_to):
 
     DNS_QUERY_FORMAT.append("hex=" + "qname" + str(j))
 
+
     DNS_QUERY["qname" + str(j)] = to_hex_string(len(host_name_to[i]))
 
     j += 1
@@ -111,14 +151,16 @@ def resolve_host_name(host_name_to):
   # Send the packet off to the server.
 
   DNS_IP = "8.8.8.8" # Google public DNS server IP.
+
   DNS_PORT = 53 # DNS server port for queries.
 
   READ_BUFFER = 1024 # The size of the buffer to read in the received UDP packet.
 
   address = (DNS_IP, DNS_PORT) # Tuple needed by sendto.
 
-  client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Internet, UDP.
+  client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)# Internet, UDP.
 
+  print(data.tobytes)
   client.sendto(data.tobytes(), address) # Send the DNS packet to the server using the port.
 
   # Get the response DNS packet back, decode, and print out the IP.
@@ -223,26 +265,27 @@ if __name__ == "__main__":
 
   HOST_NAME = "google.com"
 
-### ORIGINAL CODE
-      # try:
-      #
-      #   HOST_NAME = sys.argv[1]
-      #
-      # except IndexError:
-      #
-      #   print("No host name specified.")
-      #
-      #   sys.exit(0)
-      #   result = resolve_host_name(HOST_NAME)
-      #
-      #   print("\nHost Name:\n" + str(result['host_name']))
-      #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
-
+# ### ORIGINAL CODE
+#       # try:
+#       #
+#       #   HOST_NAME = sys.argv[1]
+#       #
+#       # except IndexError:
+#       #
+#       #   print("No host name specified.")
+#       #
+#       #   sys.exit(0)
+#       #   result = resolve_host_name(HOST_NAME)
+#       #
+#       #   print("\nHost Name:\n" + str(result['host_name']))
+#       #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
+#
   while True :
 
     result = resolve_host_name(HOST_NAME)
 
     print("\nHost Name:\n" + str(result['host_name']))
     print("\nIP Address:\n" + str(result['ip_address']) + "\n")
-
     time.sleep(10)
+
+
