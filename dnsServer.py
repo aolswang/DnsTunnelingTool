@@ -49,7 +49,6 @@ records = {
 
 def dns_response(data):
     request = DNSRecord.parse(data)
-
     print(request)
 
     reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
