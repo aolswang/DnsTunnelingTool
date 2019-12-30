@@ -24,11 +24,11 @@ digits = ['1','2','3','4','5','6','7','8','9','0']
 class LookupDict:
     def __init__(self,machine,technique,words_file_path):
         if machine == "client" and technique == "byDomain":
-            self.dict = LettersDomainsLookup(words_file_path)
-        # if machine == "client" and technique == "byIp":
-        #     self.dict = LettersWordsLookup()
+            self.dict = LettersWordsLookup(words_file_path)
+        if machine == "client" and technique == "byIp":
+             self.dict = LettersDomainsLookup(words_file_path)
         if machine == "server" and technique == "byDomain":
-            self.dict = DomainsLettersLookup(words_file_path)
+            self.dict = WordsLettersLookup(words_file_path)
         # if machine == "server" and technique == "byIp":
         #     self.dict = WordsLettersLookup()
     def transform(self,word):
@@ -36,69 +36,88 @@ class LookupDict:
 
 
 class LettersDomainsLookup:
-    def __init__(self,domains_path):
+    def __init__(self, domains_path):
         self.domains_path = domains_path
         self.letters_domains_dict = dict()
-        self.letters_occurences_dict = dict()
-        domains = pd.read_csv(self.domains_path,sep=",",names=["Idx","Domain"])
-        for i in range(0,letters_num):
-            self.letters_domains_dict[letters[i]] = domains["Domain"][i].strip(" ").translate(str.maketrans('','','1234567890'))
-            self.letters_occurences_dict[letters[i]] = 0
+        domains = pd.read_csv(self.domains_path, sep=",", names=["Idx", "domains"])
+        for i in range(0, letters_num):
+            self.letters_domains_dict[letters[i]] = domains["domains"][i].strip(" ").translate(str.maketrans('', '', '1234567890'))
         # print(self.letters_domains_dict)
         # print(self.letters_occurences_dict)
 
-
-    def transform(self,letter):
+    def transform(self, letter):
         try:
             domain = self.letters_domains_dict[letter].split(".")
             domain_name = domain[0]
-            if self.letters_occurences_dict[letter] == 0:
-                 new_domain_name = domain_name
-            else:
-                new_domain_name = domain_name + str(self.letters_occurences_dict[letter])
+            new_domain_name = domain_name
             new_domain = self.letters_domains_dict[letter].replace(domain_name, new_domain_name)
-            self.letters_occurences_dict[letter] =  self.letters_occurences_dict[letter]+1
-            #print("occ changed from "+  str(self.letters_occurences_dict[letter]-1) +"to " +str(self.letters_occurences_dict[letter]))
+            # print("occ changed from "+  str(self.letters_occurences_dict[letter]-1) +"to " +str(self.letters_occurences_dict[letter]))
             return new_domain
         except:
-            print("bad letter: "+letter)
+            print("bad letter: " + letter)
+
+
+
+
 
 
 '''
 save in this dict the original length of the domain name instead of occurnces
 '''
-class DomainsLettersLookup:
-    def __init__(self,domains_path):
-        self.domains_path = domains_path
-        self.domains_letters_dict = dict()
-        self.domains_original_size_dict = dict()
-        domains = pd.read_csv(self.domains_path,sep=",",names=["Idx","Domain"])
+#class DomainsLettersLookup:
+
+
+
+class WordsLettersLookup:
+    def __init__(self,words_path):
+        self.words_path = words_path
+        self.words_letters_dict = dict()
+        self.words_original_size_dict = dict()
+        words = pd.read_csv(self.domains_path,sep=",",names=["Idx","Words"])
         for i in range(0,letters_num):
-            self.domains_letters_dict[(domains["Domain"][i]).strip(" ").translate(str.maketrans('','','1234567890'))] = letters[i]
-            self.domains_original_size_dict[(domains["Domain"][i]).strip(" ").translate(str.maketrans('','','1234567890'))] = len(((domains["Domain"][i]).strip(" ").translate(str.maketrans('','','1234567890')).split("."))[0])
-        print(self.domains_letters_dict)
-        print(self.domains_original_size_dict)
+            self.words_letters_dict[(words["Words"][i]).strip(" ").translate(str.maketrans('','','1234567890'))] = letters[i]
+            self.words_original_size_dict[(words["Words"][i]).strip(" ").translate(str.maketrans('','','1234567890'))] = len(((words["Words"][i]).strip(" ").translate(str.maketrans('','','1234567890')).split("."))[0])
+        print(self.words_letters_dict)
+        print(self.words_original_size_dict)
 
 
-    def transform(self,domain):
+    def transform(self,word):
          try:
-            original_domain_name = domain.strip(" ").translate(str.maketrans('','','1234567890'))
+            original_word_name = word.strip(" ").translate(str.maketrans('','','1234567890'))
             # correct = self.domains_letters_dict[domain][0:len(self.domains_letters_dict[domain])-1]
             # print((self.domains_letters_dict[domain])[0:len(self.domains_letters_dict[domain])-1])
             # return (self.domains_letters_dict[domain])[0:len(self.domains_letters_dict[domain])-1]
-            return self.domains_letters_dict[original_domain_name]
+            return self.words_letters_dict[original_word_name]
          except:
-             print("bad domain: "+domain)
+             print("bad domain: "+word)
 
 
+class LettersWordsLookup:
+    def __init__(self, words_path):
+        self.words_path = words_path
+        self.letters_words_dict = dict()
+        self.letters_occurences_dict = dict()
+        words = pd.read_csv(self.words_path, sep=",", names=["Idx", "Words"])
+        for i in range(0, letters_num):
+            self.letters_words_dict[letters[i]] = words["Words"][i].strip(" ").translate(str.maketrans('', '', '1234567890'))
+            self.letters_occurences_dict[letters[i]] = 0
+        # print(self.letters_domains_dict)
+        # print(self.letters_occurences_dict)
 
-
-
-
-
-# class WordsLettersLookup:
-#
-# class LettersWordsLookup:
+    def transform(self, letter):
+        try:
+            word = self.letters_words_dict[letter].split(".")
+            word_name = word[0]
+            if self.letters_occurences_dict[letter] == 0:
+                new_word_name = word_name
+            else:
+                new_word_name = word_name + str(self.letters_occurences_dict[letter])
+            new_word = self.letters_words_dict[letter].replace(word_name, new_word_name)
+            self.letters_occurences_dict[letter] = self.letters_occurences_dict[letter] + 1
+            # print("occ changed from "+  str(self.letters_occurences_dict[letter]-1) +"to " +str(self.letters_occurences_dict[letter]))
+            return new_word
+        except:
+            print("bad letter: " + letter)
 
 #
 # mydict = LookupDict("client","byDomain","domains.csv")

